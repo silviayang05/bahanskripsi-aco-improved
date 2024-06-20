@@ -215,18 +215,6 @@ class MultipleAntColonySystem:
     @staticmethod
     def acs_vehicle(new_graph: VrptwGraph, vehicle_num: int, ants_num: int, q0: float, beta: int,
                     global_path_queue: Queue, path_found_queue: Queue, stop_event: Event):
-        """
-        对于acs_vehicle来说，所使用的vehicle num会比当前所找到的best path所使用的车辆数少一辆，要使用更少的车辆，尽量去访问结点，如果访问完了所有的结点（路径是可行的），就将通知macs
-        :param new_graph:
-        :param vehicle_num:
-        :param ants_num:
-        :param q0:
-        :param beta:
-        :param global_path_queue:
-        :param path_found_queue:
-        :param stop_event:
-        :return:
-        """
         # vehicle_num disetel ke kurang dari best_path saat ini
         print('[acs_vehicle]: start, vehicle_num %d' % vehicle_num)
         global_best_path = None

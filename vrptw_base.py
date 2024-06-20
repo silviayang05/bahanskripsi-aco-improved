@@ -21,8 +21,8 @@ class Node:
 
 
 class VrptwGraph:
-    def __init__(self, file_path, rho=0.1):
-        super()
+    def __init__(self, file_path, rho=0.1, Q=1.0):
+        super().__init__()
         # node_num nomor simpul
         # node_dist_mat jarak antar node (matriks)
         # pheromone_mat Konsentrasi informasi pada jalur antar node
@@ -30,22 +30,20 @@ class VrptwGraph:
             = self.create_from_file(file_path)
         # rho Kecepatan penguapan feromon
         self.rho = rho
+        # Tambahkan atribut Q
+        self.Q = Q
         # Buat matriks feromon
-
         self.nnh_travel_path, self.init_pheromone_val, _ = self.nearest_neighbor_heuristic()
         self.init_pheromone_val = 1/(self.init_pheromone_val * self.node_num)
-
         self.pheromone_mat = np.ones((self.node_num, self.node_num)) * self.init_pheromone_val
         # matriks informasi heuristik
         self.heuristic_info_mat = 1 / self.node_dist_mat
 
     def copy(self, init_pheromone_val):
         new_graph = copy.deepcopy(self)
-
         # Feromon
         new_graph.init_pheromone_val = init_pheromone_val
         new_graph.pheromone_mat = np.ones((new_graph.node_num, new_graph.node_num)) * init_pheromone_val
-
         return new_graph
 
     def create_from_file(self, file_path):
@@ -164,6 +162,7 @@ class VrptwGraph:
                 nearest_ind = next_index
 
         return nearest_ind
+
 
 
 class PathMessage:
