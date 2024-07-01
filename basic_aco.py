@@ -7,7 +7,6 @@ from threading import Thread
 from queue import Queue
 import time
 
-
 class BasicACO:
     def __init__(self, graph: VrptwGraph, ants_num=10, max_iter=200, beta=2, q0=0.1,
                  whether_or_not_to_show_figure=True):
@@ -79,14 +78,21 @@ class BasicACO:
                 ants[k].move_to_next_index(0)
                 self.graph.local_update_pheromone(ants[k].current_index, 0)
 
+            paths = [ant.travel_path for ant in ants]
             # Hitung panjang jalur semua semut
             paths_distance = np.array([ant.total_travel_distance for ant in ants])
 
-            # Catat jalur terbaik saat ini
-            best_index = np.argmin(paths_distance)
-            if self.best_path is None or paths_distance[best_index] < self.best_path_distance:
-                self.best_path = ants[int(best_index)].travel_path
-                self.best_path_distance = paths_distance[best_index]
+            # Catat jalur terbaik saat ini dalam iterasi ini
+            best_iteration_distance = np.min(paths_distance)
+            best_iteration_path = ants[np.argmin(paths_distance)].travel_path
+
+            # Perbarui tabel feromon berdasarkan jarak terbaik dalam iterasi ini
+            self.graph.global_update_pheromone(paths, paths_distance, best_iteration_distance)
+
+            # Catat jalur terbaik secara keseluruhan
+            if self.best_path is None or best_iteration_distance < self.best_path_distance:
+                self.best_path = best_iteration_path
+                self.best_path_distance = best_iteration_distance
                 self.best_vehicle_num = self.best_path.count(0) - 1
                 start_iteration = iter
 
@@ -95,21 +101,26 @@ class BasicACO:
                     path_queue_for_figure.put(PathMessage(self.best_path, self.best_path_distance))
 
                 print('\n')
-                print('[iteration %d]: find a improved path, its distance is %f' % (iter, self.best_path_distance))
-                print('it takes %0.3f second multiple_ant_colony_system running' % (time.time() - start_time_total))
-
-            # Perbarui tabel feromon
-            self.graph.global_update_pheromone(self.best_path, self.best_path_distance)
+                print('[iteration %d]: find a new path, its distance is %.0f' % (iter, self.best_path_distance))
+                print('it takes %0.2f second aco running' % (time.time() - start_time_total))
 
             given_iteration = 100
             if iter - start_iteration > given_iteration:
                 print('\n')
-                print('iteration exit: can not find better solution in %d iteration' % given_iteration)
+                print('iteration exit: cannot find better solution in %d iteration')
                 break
 
         print('\n')
-        print('final best path distance is %f, number of vehicle is %d' % (self.best_path_distance, self.best_vehicle_num))
-        print('it takes %0.3f second multiple_ant_colony_system running' % (time.time() - start_time_total))
+        print('final best path distance is %.0f, number of vehicle is %d' % (self.best_path_distance, self.best_vehicle_num))
+        print('it takes %0.2f second aco running' % (time.time() - start_time_total))
+        print('best path found is {}'.format(self.best_path))
+
+        # Hitung emisi karbon menggunakan jarak dan faktor emisi
+        faktor_emisi = 2.68  # kg CO2 per km
+        emisi_karbon = self.hitung_emisi_karbon(self.best_path_distance, faktor_emisi)
+
+        # Tampilkan hasil
+        print('Emisi Karbon: {:.2f} kg CO2e'.format(emisi_karbon))
 
     def select_next_index(self, ant):
         """
@@ -147,9 +158,12 @@ class BasicACO:
         sum_tran_prob = np.sum(transition_prob)
         norm_transition_prob = transition_prob/sum_tran_prob
 
-        # select: O(1)
+        select: (1)
         while True:
             # randomly select an individual with uniform probability
             ind = int(N * random.random())
             if random.random() <= norm_transition_prob[ind]:
                 return index_to_visit[ind]
+            
+    def hitung_emisi_karbon(self, jarak_tempuh, faktor_emisi):
+        return jarak_tempuh * faktor_emisi  

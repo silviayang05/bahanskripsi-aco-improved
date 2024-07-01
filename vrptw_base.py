@@ -22,7 +22,7 @@ class Node:
 
 class VrptwGraph:
     def __init__(self, file_path, rho=0.1, Q=1.0):
-        super().__init__()
+        super()
         # node_num nomor simpul
         # node_dist_mat jarak antar node (matriks)
         # pheromone_mat Konsentrasi informasi pada jalur antar node
@@ -79,16 +79,28 @@ class VrptwGraph:
         return np.linalg.norm((node_a.x - node_b.x, node_a.y - node_b.y))
 
     def local_update_pheromone(self, start_ind, end_ind):
-        self.pheromone_mat[start_ind][end_ind] = (1-self.rho) * self.pheromone_mat[start_ind][end_ind] + \
-                                                  self.rho * self.init_pheromone_val
+        self.pheromone_mat[start_ind][end_ind] = (1-self.rho) * self.pheromone_mat[start_ind][end_ind] + self.rho * self.init_pheromone_val
 
-    def global_update_pheromone(self, best_path, best_path_distance):
-        # Pembaruan feromon global menggunakan panjang jalur terbaik pada iterasi tersebut
+    def global_update_pheromone(self, paths, path_distances, best_path_distance):
+        # Penguapan feromon global
+        self.pheromone_mat = (1 - self.rho) * self.pheromone_mat
+
+        # Perhitungan penambahan feromon berdasarkan jalur terbaik
         delta_pheromone = self.Q / best_path_distance
-        for i in range(len(best_path) - 1):
-            self.pheromone_mat[best_path[i]][best_path[i + 1]] = (1 - self.rho) * self.pheromone_mat[best_path[i]][best_path[i + 1]] + delta_pheromone
-        # Jangan lupa memperbarui feromon untuk kembali ke node awal
-        self.pheromone_mat[best_path[-1]][best_path[0]] = (1 - self.rho) * self.pheromone_mat[best_path[-1]][best_path[0]] + delta_pheromone
+
+        for path in paths:
+            # Penambahan feromon baru untuk setiap edge dalam jalur
+            for i in range(len(path) - 1):
+                current_ind = path[i]
+                next_ind = path[i + 1]
+                self.pheromone_mat[current_ind][next_ind] += delta_pheromone
+                self.pheromone_mat[next_ind][current_ind] += delta_pheromone  # Jika graf simetris
+
+            # Penambahan feromon untuk edge terakhir yang kembali ke node awal
+            current_ind = path[-1]
+            next_ind = path[0]
+            self.pheromone_mat[current_ind][next_ind] += delta_pheromone
+            self.pheromone_mat[next_ind][current_ind] += delta_pheromone  # Jika graf simetris
 
     def nearest_neighbor_heuristic(self, max_vehicle_num=None):
         index_to_visit = list(range(1, self.node_num))

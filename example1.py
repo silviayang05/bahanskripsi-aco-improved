@@ -3,10 +3,11 @@ from multiple_ant_colony_system import MultipleAntColonySystem
 
 
 if __name__ == '__main__':
-    file_path = './solomon-100/r101.txt'
+    file_path = './solomon-100/rc108.txt'
     ants_num = 10
+    max_iter = 10
     beta = 2
-    q0 = 1.0
+    q0 = 0.1
     show_figure = True
 
     graph = VrptwGraph(file_path)
