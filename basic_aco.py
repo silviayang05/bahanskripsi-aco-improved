@@ -8,7 +8,7 @@ from queue import Queue
 import time
 
 class BasicACO:
-    def __init__(self, graph: VrptwGraph, ants_num=10, max_iter=200, beta=2, q0=0.1,
+    def __init__(self, graph: VrptwGraph, ants_num=10, max_iter=200, beta=2, tau=0.1,
                  whether_or_not_to_show_figure=True):
         super()
         # graph Lokasi node dan informasi waktu layanan
@@ -21,8 +21,7 @@ class BasicACO:
         self.max_load = graph.vehicle_capacity
         # beta Pentingnya informasi heuristik
         self.beta = beta
-        # q0 Merupakan probabilitas untuk langsung memilih titik berikutnya dengan probabilitas tertinggi
-        self.q0 = q0
+        self.tau = tau
         # best path
         self.best_path_distance = None
         self.best_path = None
@@ -107,16 +106,16 @@ class BasicACO:
             given_iteration = 100
             if iter - start_iteration > given_iteration:
                 print('\n')
-                print('iteration exit: cannot find better solution in %d iteration')
+                print('iteration exit: cannot find better solution in %d iteration' % given_iteration)
                 break
 
         print('\n')
         print('final best path distance is %.0f, number of vehicle is %d' % (self.best_path_distance, self.best_vehicle_num))
         print('it takes %0.2f second aco running' % (time.time() - start_time_total))
         print('best path found is {}'.format(self.best_path))
-
+ 
         # Hitung emisi karbon menggunakan jarak dan faktor emisi
-        faktor_emisi = 2.68  # kg CO2 per km
+        faktor_emisi = 2.68  # dalam kg CO2e per liter bahan bakar diesel
         emisi_karbon = self.hitung_emisi_karbon(self.best_path_distance, faktor_emisi)
 
         # Tampilkan hasil
@@ -135,7 +134,7 @@ class BasicACO:
             np.power(self.graph.heuristic_info_mat[current_index][index_to_visit], self.beta)
         transition_prob = transition_prob / np.sum(transition_prob)
 
-        if np.random.rand() < self.q0:
+        if np.random.rand() < self.tau:
             max_prob_index = np.argmax(transition_prob)
             next_index = index_to_visit[max_prob_index]
         else:
