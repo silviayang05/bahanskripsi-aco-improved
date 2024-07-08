@@ -8,15 +8,12 @@ from queue import Queue
 import time
 
 class BasicACO:
-    def __init__(self, graph: VrptwGraph, ants_num=10, max_iter=200, beta=2, tau=0.1,
-                 whether_or_not_to_show_figure=True):
+    def __init__(self, graph: VrptwGraph, ants_num=10, beta=2, tau=0.1, whether_or_not_to_show_figure=True):
         super()
         # graph Lokasi node dan informasi waktu layanan
         self.graph = graph
         # ants_num Jumlah semut
         self.ants_num = ants_num
-        # max_iter Jumlah iterasi maksimum
-        self.max_iter = max_iter
         # vehicle_capacity Menunjukkan beban maksimum setiap kendaraan
         self.max_load = graph.vehicle_capacity
         # beta Pentingnya informasi heuristik
@@ -51,31 +48,29 @@ class BasicACO:
         :return:
         """
         start_time_total = time.time()
+        last_improvement_time = time.time()
 
-        # Jumlah iterasi maksimum
-        start_iteration = 0
-        for iter in range(self.max_iter):
-
+        iter = 0
+        while True:
             # Atur beban kendaraan saat ini, jarak perjalanan saat ini, dan waktu saat ini untuk setiap semut
-            ants = list(Ant(self.graph) for _ in range(self.ants_num))
-            for k in range(self.ants_num):
-
+            ants = [Ant(self.graph) for _ in range(self.ants_num)]
+            for ant in ants:
                 # Semut perlu mengunjungi semua pelanggan
-                while not ants[k].index_to_visit_empty():
-                    next_index = self.select_next_index(ants[k])
+                while not ant.index_to_visit_empty():
+                    next_index = self.select_next_index(ant)
                     # Tentukan apakah kondisi kendala masih terpenuhi setelah menambahkan posisinya. Jika tidak, pilih lagi dan buat penilaian lagi.
-                    if not ants[k].check_condition(next_index):
-                        next_index = self.select_next_index(ants[k])
-                        if not ants[k].check_condition(next_index):
+                    if not ant.check_condition(next_index):
+                        next_index = self.select_next_index(ant)
+                        if not ant.check_condition(next_index):
                             next_index = 0
 
                     # Perbarui jalur semut
-                    ants[k].move_to_next_index(next_index)
-                    self.graph.local_update_pheromone(ants[k].current_index, next_index)
+                    ant.move_to_next_index(next_index)
+                    self.graph.local_update_pheromone(ant.current_index, next_index)
 
                 # Akhirnya kembali ke posisi 0
-                ants[k].move_to_next_index(0)
-                self.graph.local_update_pheromone(ants[k].current_index, 0)
+                ant.move_to_next_index(0)
+                self.graph.local_update_pheromone(ant.current_index, 0)
 
             paths = [ant.travel_path for ant in ants]
             # Hitung panjang jalur semua semut
@@ -93,7 +88,7 @@ class BasicACO:
                 self.best_path = best_iteration_path
                 self.best_path_distance = best_iteration_distance
                 self.best_vehicle_num = self.best_path.count(0) - 1
-                start_iteration = iter
+                last_improvement_time = time.time()
 
                 # Tampilan grafis
                 if self.whether_or_not_to_show_figure:
@@ -103,11 +98,12 @@ class BasicACO:
                 print('[iteration %d]: find a new path, its distance is %.0f' % (iter, self.best_path_distance))
                 print('it takes %0.2f second aco running' % (time.time() - start_time_total))
 
-            given_iteration = 100
-            if iter - start_iteration > given_iteration:
+            if time.time() - last_improvement_time > 600:
                 print('\n')
-                print('iteration exit: cannot find better solution in %d iteration' % given_iteration)
+                print('iteration exit: no improvement in the last 10 minutes')
                 break
+
+            iter += 1
 
         print('\n')
         print('final best path distance is %.0f, number of vehicle is %d' % (self.best_path_distance, self.best_vehicle_num))
@@ -157,7 +153,6 @@ class BasicACO:
         sum_tran_prob = np.sum(transition_prob)
         norm_transition_prob = transition_prob/sum_tran_prob
 
-        select: (1)
         while True:
             # randomly select an individual with uniform probability
             ind = int(N * random.random())
