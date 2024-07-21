@@ -3,10 +3,10 @@ from basic_aco import BasicACO
 
 
 if __name__ == '__main__':
-    file_path = './solomon-100/rc201.txt'
-    ants_num = 10
+    file_path = './solomon-100/c101.txt'
+    ants_num = 500
     # max_iter = 200
-    beta = 2
+    beta = 10
     tau = 0.1
     show_figure = True
 

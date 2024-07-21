@@ -8,7 +8,8 @@ from queue import Queue
 import time
 
 class BasicACO:
-    def __init__(self, graph: VrptwGraph, ants_num=10, beta=2, tau=0.1, whether_or_not_to_show_figure=True):
+    def __init__(self, graph: VrptwGraph, ants_num=10, beta=2, tau=0.1, 
+                 whether_or_not_to_show_figure=True, max_time=600):
         super()
         # graph Lokasi node dan informasi waktu layanan
         self.graph = graph
@@ -25,6 +26,7 @@ class BasicACO:
         self.best_vehicle_num = None
 
         self.whether_or_not_to_show_figure = whether_or_not_to_show_figure
+        self.max_time = max_time
 
     def run_basic_aco(self):
         # Mulai thread untuk menjalankan basic_aco dan gunakan thread utama untuk menggambar
@@ -48,10 +50,8 @@ class BasicACO:
         :return:
         """
         start_time_total = time.time()
-        last_improvement_time = time.time()
 
-        iter = 0
-        while True:
+        while time.time() - start_time_total < self.max_time:
             # Atur beban kendaraan saat ini, jarak perjalanan saat ini, dan waktu saat ini untuk setiap semut
             ants = [Ant(self.graph) for _ in range(self.ants_num)]
             for ant in ants:
@@ -72,46 +72,34 @@ class BasicACO:
                 ant.move_to_next_index(0)
                 self.graph.local_update_pheromone(ant.current_index, 0)
 
-            paths = [ant.travel_path for ant in ants]
             # Hitung panjang jalur semua semut
             paths_distance = np.array([ant.total_travel_distance for ant in ants])
 
-            # Catat jalur terbaik saat ini dalam iterasi ini
-            best_iteration_distance = np.min(paths_distance)
-            best_iteration_path = ants[np.argmin(paths_distance)].travel_path
-
-            # Perbarui tabel feromon berdasarkan jarak terbaik dalam iterasi ini
-            self.graph.global_update_pheromone(paths, paths_distance, best_iteration_distance)
-
-            # Catat jalur terbaik secara keseluruhan
-            if self.best_path is None or best_iteration_distance < self.best_path_distance:
-                self.best_path = best_iteration_path
-                self.best_path_distance = best_iteration_distance
+            # Catat jalur terbaik saat ini
+            best_index = np.argmin(paths_distance)
+            if self.best_path is None or paths_distance[best_index] < self.best_path_distance:
+                self.best_path = ants[int(best_index)].travel_path
+                self.best_path_distance = paths_distance[best_index]
                 self.best_vehicle_num = self.best_path.count(0) - 1
-                last_improvement_time = time.time()
 
                 # Tampilan grafis
                 if self.whether_or_not_to_show_figure:
                     path_queue_for_figure.put(PathMessage(self.best_path, self.best_path_distance))
 
                 print('\n')
-                print('[iteration %d]: find a new path, its distance is %.0f' % (iter, self.best_path_distance))
+                print('find a new path, its distance is %.0f' % (self.best_path_distance))
                 print('it takes %0.2f second aco running' % (time.time() - start_time_total))
 
-            if time.time() - last_improvement_time > 100:
-                print('\n')
-                print('iteration exit: no improvement in the last 10 minutes')
-                break
-
-            iter += 1
+            # Perbarui tabel feromon
+            self.graph.global_update_pheromone([self.best_path], paths_distance, self.best_path_distance)
 
         print('\n')
         print('final best path distance is %.0f, number of vehicle is %d' % (self.best_path_distance, self.best_vehicle_num))
         print('it takes %0.2f second aco running' % (time.time() - start_time_total))
         print('best path found is {}'.format(self.best_path))
- 
-        # Hitung emisi karbon menggunakan jarak dan faktor emisi
-        faktor_emisi = 2.68  # dalam kg CO2e per liter bahan bakar diesel
+
+        # Hitung konsumsi bahan bakar dan emisi karbon
+        faktor_emisi = 0.147  # dalam kg CO2e per liter bahan bakar diesel
         emisi_karbon = self.hitung_emisi_karbon(self.best_path_distance, faktor_emisi)
 
         # Tampilkan hasil
@@ -151,13 +139,14 @@ class BasicACO:
 
         # normalize
         sum_tran_prob = np.sum(transition_prob)
-        norm_transition_prob = transition_prob/sum_tran_prob
+        norm_transition_prob = transition_prob / sum_tran_prob
 
+        # select: O(1)
         while True:
             # randomly select an individual with uniform probability
             ind = int(N * random.random())
             if random.random() <= norm_transition_prob[ind]:
                 return index_to_visit[ind]
-            
+
     def hitung_emisi_karbon(self, jarak_tempuh, faktor_emisi):
-        return jarak_tempuh * faktor_emisi  
+        return jarak_tempuh * faktor_emisi
