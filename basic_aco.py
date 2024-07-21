@@ -98,7 +98,7 @@ class BasicACO:
                 print('[iteration %d]: find a new path, its distance is %.0f' % (iter, self.best_path_distance))
                 print('it takes %0.2f second aco running' % (time.time() - start_time_total))
 
-            if time.time() - last_improvement_time > 600:
+            if time.time() - last_improvement_time > 100:
                 print('\n')
                 print('iteration exit: no improvement in the last 10 minutes')
                 break
